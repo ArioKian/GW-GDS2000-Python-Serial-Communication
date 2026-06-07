@@ -6,6 +6,8 @@ from serial.tools import list_ports
 class GDS_2204:
 
     standardBaudRates = [50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800, 9600, 19200, 38400, 57600, 115200]
+    channelNumParams = [1, 2, 3, 4]
+    memoryLengthParams = ['MIN', 'MAX']
 
     def __init__(self):
         self.connectionStatus = False
@@ -15,6 +17,8 @@ class GDS_2204:
         for port in list_ports.comports():
             print(port.device, port.description, port.manufacturer, port.product)
 
+########################################################################################################
+########################  Methods for Checking Serial Communication Parameters  ######################## 
     def Check_BaudRate(self, baudrate):
         if(baudrate in self.standardBaudRates):
             baudrate = baudrate
@@ -67,7 +71,12 @@ class GDS_2204:
                 sys.exit(f"ERROR: the value entered as 'stopbits' for Serial Communication is not correct. The correct values are: 1, 1.5, and 2. You passed:{stopbits}")
         print(f"INFO: 'stopbits' is set as {stopbits}. ")
         return stopbits
-
+########################################################################################################
+########################################################################################################
+    
+    
+########################################################################################################
+#########################  Methods for Serial Connection with the Oscilloscope  ########################     
     def Check_OscopeConnection(self,):
         self.serialPort.write(b'*IDN?\n')
         response = self.serialPort.readline().decode().strip()
@@ -92,4 +101,61 @@ class GDS_2204:
             print(f"INFO: Oscope Connected Succesfully: {response}")
         else:
             sys.exit(f"ERROR: Oscope Connection FAILED.")
+########################################################################################################
+########################################################################################################
+
+
+########################################################################################################
+############################  Methods for the Oscilloscope Initial Settings  ###########################
+    def ActivateChannel(self, channelNum):
+        if(self.connectionStatus):
+            if(channelNum in self.channelNumParams):
+                cmd= f':CHANnel{channelNum}:DISPlay 1\n'  ## self.serialPort.write(b':CHANnel1:DISPlay 1\n')
+                checkCmd= f':CHANnel{channelNum}:DISPlay?\n' ## self.serialPort.write(b':CHANnel1:DISPlay?\n')
+                self.serialPort.write(cmd.encode('ascii'))
+                self.serialPort.write(checkCmd.encode('ascii'))
+                response = self.serialPort.readline().decode().strip()
+                if(response=='1'):
+                    print(f"INFO: Channel {channelNum} Activated.")
+            else:
+                sys.exit(f"ERROR: the value entered as channelNum is out of range. The correct values are {self.channelNumParams}. You passed {channelNum}.")
+
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")
     
+    def DeactivateChannel(self, channelNum):
+        if(self.connectionStatus):
+            if(channelNum in self.channelNumParams):
+                cmd= f':CHANnel{channelNum}:DISPlay 0\n'  ## self.serialPort.write(b':CHANnel1:DISPlay 0\n')
+                checkCmd= f':CHANnel{channelNum}:DISPlay?\n' ## self.serialPort.write(b':CHANnel1:DISPlay?\n')
+                self.serialPort.write(cmd.encode('ascii'))
+                self.serialPort.write(checkCmd.encode('ascii'))
+                response = self.serialPort.readline().decode().strip()
+                if(response=='0'):
+                    print(f"INFO: Channel {channelNum} Deactivated.")
+            else:
+                sys.exit(f"ERROR: the value entered as channelNum is out of range. The correct values are {self.channelNumParams}. You passed {channelNum}.")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")
+
+    def SetAcquireMemoryLength(self, length):
+        if(self.connectionStatus):
+            match length:
+                case 'MIN':
+                    self.serialPort.write(b':ACQuire:LENgth 0\n')
+                case 'MAX':
+                    self.serialPort.write(b':ACQuire:LENgth 1\n')
+                case _:
+                    sys.exit(f"ERROR: the value entered as length is not correct. The Correct Values are 'Min' and 'MAX'. You passed {length}.")
+            self.serialPort.write(b':ACQuire:LENgth?\n')
+            response = self.serialPort.readline().decode().strip()
+            print(f"INFO: Acquire Memory Length is set to {response}")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")
+
+
+    
+
+########################################################################################################
+########################################################################################################
+
