@@ -8,6 +8,13 @@ class GDS_2204:
     standardBaudRates = [50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800, 9600, 19200, 38400, 57600, 115200]
     channelNumParams = [1, 2, 3, 4]
     memoryLengthParams = ['MIN', 'MAX']
+    timeDivScaleParams = [1e-9, 2.5e-9, 5e-9, 10e-9, 25e-9, 50e-9, 100e-9, 250e-9, 500e-9, 1e-6, 2.5e-6, 5e-6, 10e-6, 25e-6, 50e-6, 100e-6, 250e-6, 500e-6, 1e-3, 2.5e-3, 5e-3, 10e-3, 25e-3, 50e-3, 100e-3, 250e-3, 500e-3, 1, 2.5, 5, 10]
+    voltDivScaleParams = [0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5]
+    couplingModeParams = ['AC', 'DC', 'GND']
+    triggerSourceParams = ['Channel1', 'Channel2', 'Channel3', 'Channel4', 'Extenal', 'AC_Line']
+    triggerTypeParams = ['Edge', 'Video', 'Pulse', 'Delay']
+    triggerCouplingModeParams = ['AC', 'DC']
+    triggerModeParams = ['AutoLevel', 'Auto', 'Normal', 'Single']
 
     def __init__(self):
         self.connectionStatus = False
@@ -153,8 +160,187 @@ class GDS_2204:
         else:
             sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")
 
+## Sets the horizontal timebase scale per division (SEC/DIV).
+    def SetTimeDivScale(self, timDiv):
+        if(self.connectionStatus):
+            if(timDiv in self.timeDivScaleParams):
+                cmd= f':TIMebase:SCALe {float(timDiv)}\n'  ## self.serialPort.write(b':TIMebase:SCALe 500e-6\n')
+                checkCmd= f':TIMebase:SCALe?\n' ## self.serialPort.write(b':TIMebase:SCALe?\n')
+                self.serialPort.write(cmd.encode('ascii'))
+                self.serialPort.write(checkCmd.encode('ascii'))
+                response = self.serialPort.readline().decode().strip()
+                print(f"INFO: Time/Div scale is set to {response}")
+            else:
+                sys.exit(f"ERROR: the value entered as Time/Div scale is not correct. The correct values are {self.timeDivScaleParams}. You passed {timDiv}.")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")
 
-    
+## Sets the horizontal position (delay timebase) parameter.
+    def SetHorizontalPosition(self, delay):
+        if(self.connectionStatus):
+            cmd= f':TIMebase:DElay {float(delay)}\n'  ## self.serialPort.write(b':TIMebase:DElay 2.940E-3\n')
+            checkCmd= f':TIMebase:DElay?\n' ## self.serialPort.write(b':TIMebase:DElay?\n')
+            self.serialPort.write(cmd.encode('ascii'))
+            self.serialPort.write(checkCmd.encode('ascii'))
+            response = self.serialPort.readline().decode().strip()
+            print(f"INFO: Time horizontal position offset is set to {response}")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")   
+
+    def SetChannel_VoltDivScale(self, channelNum, vltDiv):
+        if(self.connectionStatus):
+            if(channelNum in self.channelNumParams):
+                if(vltDiv in self.voltDivScaleParams):
+                    cmd= f':CHANnel{channelNum}:SCALe {float(vltDiv)}\n'  ## self.serialPort.write(b':CHANnel1:SCALe 0\n')
+                    checkCmd= f':CHANnel{channelNum}:SCALe?\n' ## self.serialPort.write(b':CHANnel1:SCALe?\n')
+                    self.serialPort.write(cmd.encode('ascii'))
+                    self.serialPort.write(checkCmd.encode('ascii'))
+                    response = self.serialPort.readline().decode().strip()
+                    print(f"INFO: Channel {channelNum} Volt/Div scale is set to {response}")
+                else:
+                    sys.exit(f"ERROR: the value entered as Volt/Div for channel {channelNum} is not coorect. The correct values are {self.voltDivScaleParams}. You passed {vltDiv}.")
+            else:
+                sys.exit(f"ERROR: the value entered as channelNum is out of range. The correct values are {self.channelNumParams}. You passed {channelNum}.")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")
+
+    def SetChannel_PositionOffset(self, channelNum, offset):
+        if(self.connectionStatus):
+            if(channelNum in self.channelNumParams):
+                cmd= f':CHANnel{channelNum}:OFFSet {float(offset)}\n'  ## self.serialPort.write(b':CHANnel1:OFFSet 0\n')
+                checkCmd= f':CHANnel{channelNum}:OFFSet?\n' ## self.serialPort.write(b':CHANnel1:OFFSet?\n')
+                self.serialPort.write(cmd.encode('ascii'))
+                self.serialPort.write(checkCmd.encode('ascii'))
+                response = self.serialPort.readline().decode().strip()
+                print(f"INFO: Channel {channelNum} position offset is set to {response}")
+            else:
+                sys.exit(f"ERROR: the value entered as channelNum is out of range. The correct values are {self.channelNumParams}. You passed {channelNum}.")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")
+
+    def SetChannel_CouplingMode(self, channelNum, mode):
+        if(self.connectionStatus):
+            if(channelNum in self.channelNumParams):
+                match mode:
+                    case 'AC':
+                        cmd= f':CHANnel{channelNum}:COUPling 0\n'  ## self.serialPort.write(b':CHANnel1:COUPling 1\n')
+                    case 'DC':
+                        cmd= f':CHANnel{channelNum}:COUPling 1\n'
+                    case 'GND':
+                        cmd= f':CHANnel{channelNum}:COUPling 2\n'
+                    case _:
+                        sys.exit(f"ERROR: the value entered as coupling mode for channel {channelNum} is out of range. The correct values are {self.couplingModeParams}. You passed {mode}.")            
+                checkCmd= f':CHANnel{channelNum}:COUPling?\n' ## self.serialPort.write(b':CHANnel1:COUPling?\n')
+                self.serialPort.write(cmd.encode('ascii'))
+                self.serialPort.write(checkCmd.encode('ascii'))
+                response = self.serialPort.readline().decode().strip()
+                print(f"INFO: Channel {channelNum} coupling mode is set to {self.couplingModeParams[int(response)]}")
+            else:
+                sys.exit(f"ERROR: the value entered as channelNum is out of range. The correct values are {self.channelNumParams}. You passed {channelNum}.")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")
+
+
+## Select and query the trigger source.    
+    def SetTrigger_Source(self, source):
+        if(self.connectionStatus):
+            match source:
+                case 'Channel1':
+                    cmd= f':TRIGger:SOURce 0\n'  ## self.serialPort.write(b':TRIGger:SOURce 0\n')
+                case 'Channel2':
+                    cmd= f':TRIGger:SOURce 1\n'  ## self.serialPort.write(b':TRIGger:SOURce 1\n')
+                case 'Channel3':
+                    cmd= f':TRIGger:SOURce 2\n'  ## self.serialPort.write(b':TRIGger:SOURce 2\n')
+                case 'Channel4':
+                    cmd= f':TRIGger:SOURce 3\n'  ## self.serialPort.write(b':TRIGger:SOURce 3\n')
+                case 'External':
+                    cmd= f':TRIGger:SOURce 4\n'  ## self.serialPort.write(b':TRIGger:SOURce 4\n')
+                case 'AC_Line':
+                    cmd= f':TRIGger:SOURce 5\n'  ## self.serialPort.write(b':TRIGger:SOURce 5\n')
+                case _:
+                    sys.exit(f"ERROR: the value entered for trigger source is not correct. the correct values are {self.triggerSourceParams}. you passed {source}")
+            checkCmd= f':TRIGger:SOURce?\n' ## self.serialPort.write(b':TRIGger:SOURce?\n')
+            self.serialPort.write(cmd.encode('ascii'))
+            self.serialPort.write(checkCmd.encode('ascii'))
+            response = self.serialPort.readline().decode().strip()
+            print(f"INFO: Trigger source is set to {self.triggerSourceParams[int(response)]}")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")   
+
+## Select and query the trigger type.
+    def SetTrigger_Type(self, trigType):
+        if(self.connectionStatus):
+            match trigType:
+                case 'Edge':
+                    cmd= f':TRIGger:TYPe 0\n'  ## self.serialPort.write(b':TRIGger:TYPe 0\n')
+                case 'Video':
+                    cmd= f':TRIGger:TYPe 1\n'  ## self.serialPort.write(b':TRIGger:TYPe 1\n')
+                case 'Pulse':
+                    cmd= f':TRIGger:TYPe 2\n'  ## self.serialPort.write(b':TRIGger:TYPe 2\n')
+                case 'Delay':
+                    cmd= f':TRIGger:TYPe 3\n'  ## self.serialPort.write(b':TRIGger:TYPe 3\n')
+                case _:
+                    sys.exit(f"ERROR: the value entered for trigger type is not correct. the correct values are {self.triggerTypeParams}. you passed {trigType}")
+            checkCmd= f':TRIGger:TYPe?\n' ## self.serialPort.write(b':TRIGger:TYPe?\n')
+            self.serialPort.write(cmd.encode('ascii'))
+            self.serialPort.write(checkCmd.encode('ascii'))
+            response = self.serialPort.readline().decode().strip()
+            print(f"INFO: Trigger type is set to {self.triggerTypeParams[int(response)]}")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")   
+
+## Select and query the type of trigger coupling.
+    def SetTrigger_CouplingMode(self, mode):
+        if(self.connectionStatus):
+            match mode:
+                case 'AC':
+                    cmd= f':TRIGger:COUPle 0\n'  ## self.serialPort.write(b':TRIGger:COUPle 0\n')
+                case 'DC':
+                    cmd= f':TRIGger:COUPle 1\n'  ## self.serialPort.write(b':TRIGger:COUPle 1\n')
+                case _:
+                    sys.exit(f"ERROR: the value entered as trigger coupling mode is not correct. The correct values are {self.triggerCouplingModeParams}. You passed {mode}.")
+            checkCmd= f':TRIGger:COUPle?\n' ## self.serialPort.write(b':TRIGger:COUPle?\n')
+            self.serialPort.write(cmd.encode('ascii'))
+            self.serialPort.write(checkCmd.encode('ascii'))
+            response = self.serialPort.readline().decode().strip()
+            print(f"INFO: Trigger coupling mode is set to {self.triggerCouplingModeParams[int(response)]}")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")   
+
+## Select and query the trigger level.
+    def SetTrigger_Level(self, level):
+        if(self.connectionStatus):
+            cmd= f':TRIGger:LEVel {float(level)}\n'  ## self.serialPort.write(b'::TRIGger:LEVel 1.6\n')
+            checkCmd= f':TRIGger:LEVel?\n' ## self.serialPort.write(b':TRIGger:LEVel?\n')
+            self.serialPort.write(cmd.encode('ascii'))
+            self.serialPort.write(checkCmd.encode('ascii'))
+            response = self.serialPort.readline().decode().strip()
+            print(f"INFO: trigger level is set to {response}")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")   
+
+## Select and query the trigger mode.
+    def SetTrigger_Mode(self, mode):
+        if(self.connectionStatus):
+            match mode:
+                case 'Auto Level':
+                    cmd= f':TRIGger:MODe 0\n'  ## self.serialPort.write(b':TRIGger:MODe 0\n')
+                case 'Auto':
+                    cmd= f':TRIGger:MODe 1\n'
+                case 'Normal':
+                    cmd= f':TRIGger:MODe 2\n'
+                case 'Single':
+                    cmd= f':TRIGger:MODe 3\n'
+                case _:
+                    sys.exit(f"ERROR: the value entered as trigger mode is out of range. The correct values are {self.triggerModeParams}. You passed {mode}.")
+            checkCmd= f':TRIGger:MODe?\n' ## self.serialPort.write(b':TRIGger:MODe?\n')
+            self.serialPort.write(cmd.encode('ascii'))
+            self.serialPort.write(checkCmd.encode('ascii'))
+            response = self.serialPort.readline().decode().strip()
+            print(f"INFO: trigger mode is set to {self.triggerModeParams[int(response)]}")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")   
+
 
 ########################################################################################################
 ########################################################################################################
