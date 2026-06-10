@@ -6,6 +6,9 @@ from serial.tools import list_ports
 class GDS_2204:
 
     standardBaudRates = [50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800, 9600, 19200, 38400, 57600, 115200]
+    displayAccumulateModeParams = ['Disable', 'Enable']
+    displayWaveformTypeParams = ['Vectors', 'Dots']
+    displayGraticuleTypeParams = ['FullGrid', 'CrossType', 'OuterFrame']
     channelNumParams = [1, 2, 3, 4]
     memoryLengthParams = ['MIN', 'MAX']
     timeDivScaleParams = [1e-9, 2.5e-9, 5e-9, 10e-9, 25e-9, 50e-9, 100e-9, 250e-9, 500e-9, 1e-6, 2.5e-6, 5e-6, 10e-6, 25e-6, 50e-6, 100e-6, 250e-6, 500e-6, 1e-3, 2.5e-3, 5e-3, 10e-3, 25e-3, 50e-3, 100e-3, 250e-3, 500e-3, 1, 2.5, 5, 10]
@@ -114,6 +117,71 @@ class GDS_2204:
 
 ########################################################################################################
 ############################  Methods for the Oscilloscope Initial Settings  ###########################
+
+    def AutoSet(self):
+        if(self.connectionStatus):
+            self.serialPort.write(b':AUToset\n')
+            print(f"INFO: Oscope going under AutoSet Operation.")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")
+
+## Select the accumulate display mode.
+    def SetDisplay_AccumulateMode(self, mode):
+        if(self.connectionStatus):
+            match mode:
+                case 'Enable':
+                    cmd= f':DISPlay:ACCumulate 1\n'
+                case 'Disable':
+                    cmd= f':DISPlay:ACCumulate 0\n'
+                case _:
+                    sys.exit(f"ERROR: the value entered for display accumulate mode is not correct. the correct values are {self.displayAccumulateModeParams}. you passed {mode}")
+            checkCmd= f':DISPlay:ACCumulate?\n' ## self.serialPort.write(b':DISPlay:ACCumulate?\n')
+            self.serialPort.write(cmd.encode('ascii'))
+            self.serialPort.write(checkCmd.encode('ascii'))
+            response = self.serialPort.readline().decode().strip()
+            print(f"INFO: display accumulate mode is set to {self.displayAccumulateModeParams[int(response)]}")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")
+
+## Select the dots (or vectors) display for data.points.
+    def SetDisplay_WaveformType(self, typ):
+        if(self.connectionStatus):
+            match typ:
+                case 'Vectors':
+                    cmd= f':DISPlay:WAVeform 0\n'
+                case 'Dots':
+                    cmd= f':DISPlay:WAVeform 1\n'
+                case _:
+                    sys.exit(f"ERROR: the value entered for display waveform type is not correct. the correct values are {self.displayWaveformTypeParams}. you passed {typ}")
+            checkCmd= f':DISPlay:WAVeform?\n' ## self.serialPort.write(b':DISPlay:WAVeform?\n')
+            self.serialPort.write(cmd.encode('ascii'))
+            self.serialPort.write(checkCmd.encode('ascii'))
+            response = self.serialPort.readline().decode().strip()
+            print(f"INFO: display waveform type is set to {self.displayWaveformTypeParams[int(response)]}")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")
+
+## Select graticule display type for LCD screen.
+    def SetDisplay_GraticuleType(self, typ):
+        if(self.connectionStatus):
+            match typ:
+                case 'FullGrid':
+                    cmd= f':DISPlay:GRATicule 0\n'
+                case 'CrossType':
+                    cmd= f':DISPlay:GRATicule 1\n'
+                case 'OuterFrame':
+                    cmd= f':DISPlay:GRATicule 2\n'
+                case _:
+                    sys.exit(f"ERROR: the value entered for display graticule type is not correct. the correct values are {self.displayGraticuleTypeParams}. you passed {typ}")
+            checkCmd= f':DISPlay:GRATicule?\n' ## self.serialPort.write(b':DISPlay:GRATicule?\n')
+            self.serialPort.write(cmd.encode('ascii'))
+            self.serialPort.write(checkCmd.encode('ascii'))
+            response = self.serialPort.readline().decode().strip()
+            print(f"INFO: display graticule type is set to {self.displayGraticuleTypeParams[int(response)]}")
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")
+
+
     def ActivateChannel(self, channelNum):
         if(self.connectionStatus):
             if(channelNum in self.channelNumParams):
@@ -235,6 +303,7 @@ class GDS_2204:
                 self.serialPort.write(checkCmd.encode('ascii'))
                 response = self.serialPort.readline().decode().strip()
                 print(f"INFO: Channel {channelNum} coupling mode is set to {self.couplingModeParams[int(response)]}")
+                # print(f"INFO: Channel {channelNum} coupling mode is set to {response}")
             else:
                 sys.exit(f"ERROR: the value entered as channelNum is out of range. The correct values are {self.channelNumParams}. You passed {channelNum}.")
         else:
@@ -264,6 +333,7 @@ class GDS_2204:
             self.serialPort.write(checkCmd.encode('ascii'))
             response = self.serialPort.readline().decode().strip()
             print(f"INFO: Trigger source is set to {self.triggerSourceParams[int(response)]}")
+            # print(f"INFO: Trigger source is set to {response}")
         else:
             sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")   
 
@@ -345,3 +415,25 @@ class GDS_2204:
 ########################################################################################################
 ########################################################################################################
 
+
+########################################################################################################
+############################  Methods for the Oscilloscope Operations  ###########################
+
+    def Run(self):
+        if(self.connectionStatus):
+            cmd = ':RUN\n'
+            self.serialPort.write(cmd.encode('ascii'))
+            print(f'INFO: oscope in RUN mode')
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")   
+
+    def Stop(self):
+        if(self.connectionStatus):
+            cmd = ':STOP\n'
+            self.serialPort.write(cmd.encode('ascii'))
+            print(f'INFO: oscope in STOP mode')
+        else:
+            sys.exit(f"ERROR: No Connection with Oscope or COM port. connectionStatus: {self.connectionStatus}")   
+
+########################################################################################################
+########################################################################################################
